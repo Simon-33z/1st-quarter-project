@@ -1,0 +1,39 @@
+START
+
+DEFINE listing = food_type, quantity, pickup_window, location, status
+DEFINE recipients = list of registered recipients (name, location, accepted_food_types, has_phone_access, status)
+DEFINE partner_sites = list of partner drop-off points (name, location, capacity, status)
+
+STEP 1: Donor submits a new listing
+    Set listing.status = "Posted"
+    Record pickup_window as the expiry time
+
+STEP 2: For each recipient in recipients
+    If recipient is active AND
+       listing.food_type is in recipient.accepted_food_types AND
+       distance(listing.location, recipient.location) <= MAX_DISTANCE
+    Then:
+        If recipient.has_phone_access is True
+            Add recipient to possible_matches
+        Else
+            Find nearest active partner_site to recipient's area
+            Add that partner_site to possible_matches instead
+
+STEP 3: If possible_matches is not empty
+    Pick the closest match (recipient or partner site)
+    Set listing.status = "Matched"
+    Send notification to that recipient or partner site
+    Else keep listing.status = "Posted" and wait for the next matching cycle
+
+STEP 4: If recipient or partner site confirms pickup
+    Set listing.status = "Picked Up"
+    Else if match is declined
+    Set listing.status back to "Posted" and go back to STEP 2 (skip the one that declined)
+
+STEP 5: If current_time >= pickup_window AND listing.status != "Picked Up"
+    Set listing.status = "Expired"
+    Remove it from the active listings view
+
+STEP 6: Show the updated list of active listings
+
+END
